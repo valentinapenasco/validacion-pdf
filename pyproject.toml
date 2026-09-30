@@ -1,0 +1,24 @@
+[project]
+name = "validacion-pdf"
+version = "1.0.0"
+description = "Microservicio de validación de archivos PDF para el proyecto microservicios-pdf"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.136.0",
+    "uvicorn[standard]==0.45.0",
+    "pydantic==2.13.3",
+    "pydantic-settings==2.14.0",
+    "python-multipart==0.0.26",
+    "pytest==9.0.3",
+    "httpx==0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
