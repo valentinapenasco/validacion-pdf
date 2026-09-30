@@ -157,6 +157,11 @@ app/
     ├── exceptions.py
     ├── repository.py
     └── database.py
+tests/
+├── unit/
+│   └── test_validation_service.py
+└── integration/
+    └── test_validation_http.py
 ```
 
 Dirección de dependencias:
@@ -259,12 +264,20 @@ uv run pytest -v
 
 Los tests cubren:
 
-- Healthcheck.
-- PDF válido.
-- Base64 inválido.
-- PDF demasiado grande.
-- Nombre por defecto.
-- Propagación de `X-Correlation-ID`.
+- Tests unitarios directos del servicio:
+  - PDF válido.
+  - Base64 inválido.
+  - contenido vacío.
+  - contenido que no es PDF.
+  - PDF corrupto.
+  - PDF demasiado grande.
+  - nombre por defecto.
+- Tests de integración HTTP:
+  - healthcheck.
+  - `POST /validar`.
+  - `POST /api/v1/validar`.
+  - status HTTP y formato de respuesta.
+  - propagación de `X-Correlation-ID`.
 
 ## Estado del microservicio
 
