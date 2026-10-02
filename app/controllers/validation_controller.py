@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
@@ -19,12 +17,6 @@ async def health() -> dict:
 @router.post("/validar")
 @router.post("/api/v1/validar")
 async def validar_pdf(payload: ValidationRequest, request: Request) -> dict:
-    correlation_id = (
-        request.headers.get("x-correlation-id")
-        or request.headers.get("X-Correlation-ID")
-        or str(uuid4())
-    )
-
     try:
         resultado = ValidationService().validate(payload.archivo_base64, payload.nombre)
         return {
@@ -37,7 +29,7 @@ async def validar_pdf(payload: ValidationRequest, request: Request) -> dict:
             "code": exc.code,
             "message": exc.message,
             "details": exc.details,
-            "correlation_id": correlation_id,
+            "correlation_id": request.state.correlation_id,
         }
         return JSONResponse(
             status_code=exc.status_code,

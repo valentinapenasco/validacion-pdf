@@ -76,3 +76,42 @@ def test_validation_endpoint_returns_standard_error_contract():
     assert body["error"]["details"] == {}
     assert body["error"]["correlation_id"]
     assert response.headers["X-Correlation-ID"]
+
+
+def test_error_preserves_supplied_correlation_id():
+    correlation_id = "error-123"
+
+    response = TestClient(app).post(
+        "/validar",
+        json={"archivo_base64": "no-es-base64"},
+        headers={"X-Correlation-ID": correlation_id},
+    )
+
+    assert response.status_code == 400
+    assert response.headers["X-Correlation-ID"] == correlation_id
+    assert response.json()["error"]["correlation_id"] == correlation_id
+
+
+def test_error_uses_same_generated_correlation_id_in_header_and_body():
+    response = TestClient(app).post(
+        "/validar",
+        json={"archivo_base64": "no-es-base64"},
+    )
+
+    assert response.status_code == 400
+    assert (
+        response.headers["X-Correlation-ID"]
+        == response.json()["error"]["correlation_id"]
+    )
+
+
+def test_validation_endpoint_rejects_missing_base64():
+    response = TestClient(app).post(
+        "/validar",
+        json={"nombre": "archivo.pdf"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["valido"] is False
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.headers["X-Correlation-ID"]
