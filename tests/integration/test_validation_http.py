@@ -78,6 +78,30 @@ def test_validation_endpoint_returns_standard_error_contract():
     assert response.headers["X-Correlation-ID"]
 
 
+def test_validation_endpoint_rejects_corrupted_pdf():
+    corrupted_pdf = b"%PDF-1.4\ncontenido incompleto"
+
+    response = TestClient(app).post(
+        "/validar",
+        json={"archivo_base64": encoded_pdf(corrupted_pdf)},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "PDF_CORRUPTED"
+
+
+def test_validation_endpoint_rejects_pdf_that_is_too_large():
+    oversized_pdf = b"%PDF-1.4\n" + (b"x" * (6 * 1024 * 1024))
+
+    response = TestClient(app).post(
+        "/validar",
+        json={"archivo_base64": encoded_pdf(oversized_pdf)},
+    )
+
+    assert response.status_code == 413
+    assert response.json()["error"]["code"] == "PDF_TOO_LARGE"
+
+
 def test_error_preserves_supplied_correlation_id():
     correlation_id = "error-123"
 
