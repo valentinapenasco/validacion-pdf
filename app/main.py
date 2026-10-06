@@ -46,7 +46,7 @@ async def request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
     return JSONResponse(
-        status_code=422,
+        status_code=400,
         content={
             "valido": False,
             "error": {

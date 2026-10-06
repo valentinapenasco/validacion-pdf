@@ -12,7 +12,7 @@ class ValidationService:
             raise PdfValidationError(
                 code="PDF_INVALID",
                 message="El archivo no es un PDF válido",
-                status_code=400,
+                status_code=422,
             )
 
         try:
@@ -21,14 +21,14 @@ class ValidationService:
             raise PdfValidationError(
                 code="PDF_INVALID",
                 message="El archivo no es un PDF válido",
-                status_code=400,
+                status_code=422,
             ) from exc
 
         if not decoded:
             raise PdfValidationError(
                 code="PDF_INVALID",
                 message="El archivo no es un PDF válido",
-                status_code=400,
+                status_code=422,
             )
 
         max_size_bytes = settings.pdf_max_size_mb * 1024 * 1024
@@ -47,7 +47,7 @@ class ValidationService:
             raise PdfValidationError(
                 code="PDF_INVALID",
                 message="El archivo no es un PDF válido",
-                status_code=400,
+                status_code=422,
             )
 
         if b"%%EOF" not in decoded or b"/Type /Catalog" not in decoded:
