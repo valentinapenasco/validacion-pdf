@@ -1,12 +1,14 @@
 import base64
 import binascii
 
-from app.core.config import settings
 from app.core.exceptions import PdfValidationError
 from app.models.pdf_validation_result import PdfValidationResult
 
 
 class ValidationService:
+    def __init__(self, max_size_bytes: int) -> None:
+        self._max_size_bytes = max_size_bytes
+
     def validate(
         self, archivo_base64: str, nombre: str | None = None
     ) -> PdfValidationResult:
@@ -33,14 +35,13 @@ class ValidationService:
                 status_code=422,
             )
 
-        max_size_bytes = settings.pdf_max_size_mb * 1024 * 1024
-        if len(decoded) > max_size_bytes:
+        if len(decoded) > self._max_size_bytes:
             raise PdfValidationError(
                 code="PDF_TOO_LARGE",
                 message="El archivo supera el tamaño máximo permitido",
                 status_code=413,
                 details={
-                    "max_size_bytes": max_size_bytes,
+                    "max_size_bytes": self._max_size_bytes,
                     "received_size_bytes": len(decoded),
                 },
             )
