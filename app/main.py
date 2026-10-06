@@ -24,57 +24,49 @@ async def correlation_id_middleware(request: Request, call_next):
     return response
 
 
-@app.exception_handler(PdfValidationError)
-async def validation_exception_handler(request: Request, exc: PdfValidationError):
+def error_response(
+    request: Request, status_code: int, code: str, message: str, details: dict
+) -> JSONResponse:
+    """Formato común de errores del contrato microservicios-pdf. El header se
+    agrega acá porque el handler de Exception corre fuera del middleware."""
     correlation_id = request.state.correlation_id
     return JSONResponse(
-        status_code=exc.status_code,
+        status_code=status_code,
         content={
             "valido": False,
             "error": {
-                "code": exc.code,
-                "message": exc.message,
-                "details": exc.details,
+                "code": code,
+                "message": message,
+                "details": details,
                 "correlation_id": correlation_id,
             },
         },
+        headers={"X-Correlation-ID": correlation_id},
     )
+
+
+@app.exception_handler(PdfValidationError)
+async def validation_exception_handler(request: Request, exc: PdfValidationError):
+    return error_response(request, exc.status_code, exc.code, exc.message, exc.details)
 
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_exception_handler(
     request: Request, exc: RequestValidationError
 ):
-    return JSONResponse(
-        status_code=400,
-        content={
-            "valido": False,
-            "error": {
-                "code": "VALIDATION_ERROR",
-                "message": "El request no cumple el contrato esperado",
-                "details": {"errors": exc.errors()},
-                "correlation_id": request.state.correlation_id,
-            },
-        },
+    return error_response(
+        request,
+        400,
+        "VALIDATION_ERROR",
+        "El request no cumple el contrato esperado",
+        {"errors": exc.errors()},
     )
 
 
 @app.exception_handler(Exception)
 async def unexpected_exception_handler(request: Request, exc: Exception):
-    # Corre fuera del middleware de correlation ID: el header se agrega acá.
-    correlation_id = request.state.correlation_id
-    return JSONResponse(
-        status_code=500,
-        content={
-            "valido": False,
-            "error": {
-                "code": "INTERNAL_ERROR",
-                "message": "Error interno del servidor",
-                "details": {},
-                "correlation_id": correlation_id,
-            },
-        },
-        headers={"X-Correlation-ID": correlation_id},
+    return error_response(
+        request, 500, "INTERNAL_ERROR", "Error interno del servidor", {}
     )
 
 
