@@ -19,8 +19,9 @@ class ValidationService:
                 status_code=422,
             )
 
+        sin_espacios = "".join(archivo_base64.split())
         try:
-            decoded = base64.b64decode(archivo_base64, validate=True)
+            decoded = base64.b64decode(sin_espacios, validate=True)
         except (ValueError, binascii.Error) as exc:
             raise PdfValidationError(
                 code="PDF_INVALID",
