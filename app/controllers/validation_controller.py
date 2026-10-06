@@ -12,13 +12,11 @@ ValidationServiceDep = Annotated[ValidationService, Depends(get_validation_servi
 
 
 @router.get("/health")
-@router.get("/api/v1/health")
 async def health() -> dict:
     return {"status": "ok"}
 
 
 @router.post("/validar")
-@router.post("/api/v1/validar")
 async def validar_pdf(
     payload: ValidationRequest, service: ValidationServiceDep
 ) -> dict:

@@ -21,13 +21,6 @@ def test_health_endpoint_returns_ok(client):
     assert response.headers["X-Correlation-ID"]
 
 
-def test_versioned_health_endpoint_returns_ok(client):
-    response = client.get("/api/v1/health")
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
-
-
 def test_validation_endpoint_returns_success_contract(client):
     response = client.post(
         "/validar",
@@ -45,16 +38,6 @@ def test_validation_endpoint_returns_success_contract(client):
         "nombre": "contrato.pdf",
         "tamano_bytes": len(VALID_PDF),
     }
-
-
-def test_versioned_validation_endpoint_is_supported(client):
-    response = client.post(
-        "/api/v1/validar",
-        json={"archivo_base64": encoded_pdf()},
-    )
-
-    assert response.status_code == 200
-    assert response.json()["valido"] is True
 
 
 def test_validation_endpoint_returns_standard_error_contract(client):
