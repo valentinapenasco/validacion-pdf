@@ -100,3 +100,12 @@ def test_validate_accepts_catalog_inside_compressed_object_stream():
     result = service().validate(encode(pdf), "contrato.pdf")
 
     assert result.valido is True
+
+
+def test_validate_accepts_base64_with_line_breaks():
+    # El comando base64 corta la salida cada 76 caracteres.
+    wrapped = base64.encodebytes(VALID_PDF).decode("ascii")
+
+    result = service().validate(wrapped, "contrato.pdf")
+
+    assert result.tamano_bytes == len(VALID_PDF)
