@@ -3,7 +3,7 @@ class PdfValidationError(Exception):
         self,
         code: str,
         message: str,
-        status_code: int = 400,
+        status_code: int,
         details: dict | None = None,
     ) -> None:
         self.code = code

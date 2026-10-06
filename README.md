@@ -15,10 +15,10 @@ Hace:
 - Decodificar el contenido Base64.
 - Validar que el contenido no esté vacío.
 - Validar la firma `%PDF`.
-- Validar una estructura mínima del PDF.
+- Validar que el PDF esté completo (marcador `%%EOF`).
 - Validar el tamaño máximo configurado.
 - Informar el tamaño recibido en bytes.
-- Propagar `X-Correlation-ID`.
+- Propagar `X-Correlation-ID` y registrarlo en cada línea de log.
 - Exponer un healthcheck.
 
 ## Responsabilidades excluidas
@@ -42,9 +42,7 @@ corresponden a sus respectivos microservicios.
 | Método | Ruta | Descripción |
 | --- | --- | --- |
 | `POST` | `/validar` | Valida un PDF enviado en Base64. |
-| `POST` | `/api/v1/validar` | Alias versionado del endpoint de validación. |
 | `GET` | `/health` | Healthcheck del servicio. |
-| `GET` | `/api/v1/health` | Alias versionado del healthcheck. |
 
 La documentación interactiva queda disponible en
 `http://localhost:8000/docs` cuando el servicio está levantado.
@@ -60,8 +58,8 @@ La documentación interactiva queda disponible en
 }
 ```
 
-`archivo_base64` es obligatorio. `nombre` es opcional; si no se informa, se
-utiliza `documento.pdf`.
+`archivo_base64` y `nombre` son obligatorios. Se aceptan espacios y saltos de
+línea dentro del Base64 (por ejemplo, la salida del comando `base64`).
 
 ### Response exitosa
 
@@ -77,7 +75,8 @@ HTTP `200`:
 
 ### Response de error
 
-Los errores producidos por las reglas de negocio utilizan el formato común:
+Todos los errores (de negocio, de schema y no previstos) utilizan el formato
+común:
 
 ```json
 {
@@ -100,9 +99,9 @@ Los errores producidos por las reglas de negocio utilizan el formato común:
 | --- | ---: | --- |
 | `PDF_INVALID` | `422` | Base64 inválido, contenido vacío o archivo que no es PDF. |
 | `PDF_TOO_LARGE` | `413` | El tamaño supera `PDF_MAX_SIZE_MB`. |
-| `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene la estructura mínima esperada. |
-| `VALIDATION_ERROR` | `400` | El request no cumple el schema de entrada. |
-| `INTERNAL_ERROR` | `500` | Error interno no previsto. |
+| `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene el marcador `%%EOF` (archivo truncado). |
+| `VALIDATION_ERROR` | `400` | El request no cumple el schema de entrada (falta un campo, campo vacío, body que no es JSON). |
+| `INTERNAL_ERROR` | `500` | Error interno no previsto. También devuelve el `correlation_id`. |
 
 ## Correlation ID
 
@@ -112,6 +111,22 @@ El servicio propaga la cabecera `X-Correlation-ID`:
 - Si no la trae, genera un identificador UUID.
 - El identificador se devuelve en la cabecera de la respuesta.
 - En las respuestas de error también aparece como `error.correlation_id`.
+
+## Logs
+
+Los logs van a `stdout` (12-Factor XI); la aplicación no escribe archivos. Cada
+línea incluye el `correlation_id`, así que `docker compose logs` alcanza para
+seguir una request por todos los servicios:
+
+```text
+2026-10-06 19:19:48,236 WARNING validacion_pdf correlation_id=demo-2 code=PDF_INVALID status=422 message=El archivo no es un PDF válido
+2026-10-06 19:19:48,236 INFO validacion_pdf correlation_id=demo-2 method=POST path=/validar status=422 duracion_ms=1.1
+```
+
+- Cada request: método, ruta, status y duración (`INFO`).
+- Cada error: código y status (`WARNING` para 4xx, `ERROR` con traceback para 5xx).
+- El access log propio de uvicorn está desactivado en la imagen porque no lleva
+  el `correlation_id`.
 
 Ejemplo:
 
@@ -153,26 +168,31 @@ app/
 ├── models/
 │   └── pdf_validation_result.py
 └── core/
+    ├── composition.py
     ├── config.py
-    ├── exceptions.py
-    ├── repository.py
-    └── database.py
+    └── exceptions.py
 tests/
 ├── unit/
 │   └── test_validation_service.py
 └── integration/
+    ├── conftest.py
     └── test_validation_http.py
 ```
 
 Dirección de dependencias:
 
 ```text
-controller → service → repository → infraestructura
+controller → service
 ```
 
-En este microservicio no se persiste información. El repositorio abstracto y
-el adaptador en memoria existen para cumplir la arquitectura común y facilitar
-las pruebas sin una base de datos.
+Este microservicio no persiste información ni llama a otros servicios, así que
+no tiene repositorio ni adaptadores en `core/`: el contrato lo excluye
+explícitamente (no usa MongoDB ni Redis). Agregar un puerto sin implementación
+real sería código muerto.
+
+El servicio se arma en `app/core/composition.py` (único lugar donde se lee la
+configuración) y el controller lo recibe con `Depends`. El tamaño máximo llega
+al servicio por constructor, sin valor por defecto.
 
 Reglas respetadas:
 
@@ -253,13 +273,20 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-## Tests
+## Tests y calidad
 
-La suite es hermética: no necesita MongoDB, Redis, red ni otros
-microservicios.
+`uv sync` instala también el grupo `dev` (pytest, httpx, ruff, black). La
+imagen Docker usa `uv sync --no-dev` y no los incluye.
+
+La suite es hermética: no necesita MongoDB, Redis, red, otros microservicios
+ni `.env`. Los tests de integración inyectan el servicio con un límite fijo
+(`app.dependency_overrides`), así que un `.env` local con otro
+`PDF_MAX_SIZE_MB` no cambia el resultado.
 
 ```bash
 uv run pytest -v
+uv run ruff check app tests
+uv run black --check app tests
 ```
 
 Los tests cubren:
@@ -271,18 +298,50 @@ Los tests cubren:
   - contenido que no es PDF.
   - PDF corrupto.
   - PDF demasiado grande.
-  - nombre por defecto.
+  - catálogo escrito sin espacio (`/Type/Catalog`) o dentro de un object stream.
+  - Base64 con saltos de línea.
 - Tests de integración HTTP:
   - healthcheck.
   - `POST /validar`.
-  - `POST /api/v1/validar`.
-  - status HTTP y formato de respuesta.
+  - status HTTP y formato de respuesta de cada código de error del contrato.
+  - `nombre` o `archivo_base64` faltantes o en blanco → `VALIDATION_ERROR`.
+  - error no previsto → `INTERNAL_ERROR` (con un servicio de prueba inyectado).
   - propagación de `X-Correlation-ID`.
+  - logs con `correlation_id`.
+
+Queda fuera de los tests automatizados, a propósito: la imagen Docker (se
+verifica con el healthcheck al levantarla).
+
+## Docker
+
+```bash
+docker build -t validacion-pdf:1.0.0 .
+docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.0
+```
+
+La imagen corre con el usuario sin privilegios `appuser` y tiene un
+`HEALTHCHECK` contra `/health`.
 
 ## Estado del microservicio
 
 La implementación actual incluye el contrato HTTP, la validación de negocio,
-los errores principales, el healthcheck, la trazabilidad y los tests iniciales.
+todos los errores del contrato, el healthcheck, la trazabilidad con logs y los
+tests unitarios y de integración.
+
+## Deuda técnica declarada
+
+- **TDD en la primera entrega.** Los commits iniciales trajeron el código y
+  los tests juntos, sin un commit rojo previo. Desde los arreglos de la
+  auditoría (rama `fix/auditoria-validacion-pdf`), cada cambio de
+  comportamiento sigue el ciclo test rojo → implementación → refactor.
+- **Tamaño medido después de decodificar.** El límite se controla sobre los
+  bytes ya decodificados, así que un request enorme se decodifica entero antes
+  de rechazarse. El tamaño del body se puede limitar antes, en Traefik.
+- **Validación estructural mínima.** Solo se verifica `%PDF` al inicio y
+  `%%EOF`. La validación profunda la hace `extraccion-texto` con `pypdf`, que
+  responde `PDF_CORRUPTED` si no puede leer el archivo.
+- **Puerto fijo en la imagen (8000).** Docker Compose y Traefik lo mapean; no
+  hace falta una variable porque el contrato no la define.
 
 El microservicio queda preparado para ser utilizado por el orquestador y
 publicado como repositorio independiente en GitHub.

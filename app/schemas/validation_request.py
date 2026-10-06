@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field, field_validator
 
 class ValidationRequest(BaseModel):
     archivo_base64: str = Field(..., min_length=1)
-    nombre: str | None = Field(default=None, max_length=255)
+    nombre: str = Field(..., min_length=1, max_length=255)
 
     @field_validator("archivo_base64")
     @classmethod
@@ -15,6 +15,5 @@ class ValidationRequest(BaseModel):
 
 class ValidationResponse(BaseModel):
     valido: bool
-    nombre: str | None = None
-    tamano_bytes: int | None = None
-    error: dict | None = None
+    nombre: str
+    tamano_bytes: int
