@@ -32,7 +32,7 @@ def test_validate_rejects_invalid_base64():
         ValidationService().validate("no-es-base64")
 
     assert error.value.code == "PDF_INVALID"
-    assert error.value.status_code == 400
+    assert error.value.status_code == 422
 
 
 def test_validate_rejects_empty_content():
@@ -40,6 +40,7 @@ def test_validate_rejects_empty_content():
         ValidationService().validate(encode(b""))
 
     assert error.value.code == "PDF_INVALID"
+    assert error.value.status_code == 422
 
 
 def test_validate_rejects_content_that_is_not_a_pdf():
@@ -47,6 +48,7 @@ def test_validate_rejects_content_that_is_not_a_pdf():
         ValidationService().validate(encode(b"texto plano"))
 
     assert error.value.code == "PDF_INVALID"
+    assert error.value.status_code == 422
 
 
 def test_validate_rejects_corrupted_pdf():
