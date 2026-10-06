@@ -124,3 +124,20 @@ def test_validation_endpoint_rejects_missing_nombre(client):
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_unexpected_error_returns_internal_error_contract(failing_client):
+    response = failing_client.post(
+        "/validar",
+        json={"archivo_base64": encoded_pdf(), "nombre": "contrato.pdf"},
+        headers={"X-Correlation-ID": "falla-500"},
+    )
+
+    assert response.status_code == 500
+    body = response.json()
+    assert body["valido"] is False
+    assert body["error"]["code"] == "INTERNAL_ERROR"
+    assert body["error"]["message"]
+    assert body["error"]["details"] == {}
+    assert body["error"]["correlation_id"] == "falla-500"
+    assert response.headers["X-Correlation-ID"] == "falla-500"
