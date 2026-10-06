@@ -17,9 +17,7 @@ class ValidationService:
     def __init__(self, max_size_bytes: int) -> None:
         self._max_size_bytes = max_size_bytes
 
-    def validate(
-        self, archivo_base64: str, nombre: str | None = None
-    ) -> PdfValidationResult:
+    def validate(self, archivo_base64: str, nombre: str) -> PdfValidationResult:
         sin_espacios = "".join(archivo_base64.split())
         try:
             decoded = base64.b64decode(sin_espacios, validate=True)
@@ -52,6 +50,6 @@ class ValidationService:
 
         return PdfValidationResult(
             valido=True,
-            nombre=nombre or "documento.pdf",
+            nombre=nombre,
             tamano_bytes=len(decoded),
         )
