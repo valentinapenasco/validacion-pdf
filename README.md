@@ -98,10 +98,10 @@ Los errores producidos por las reglas de negocio utilizan el formato común:
 
 | Código | HTTP | Descripción |
 | --- | ---: | --- |
-| `PDF_INVALID` | `400` | Base64 inválido, contenido vacío o archivo que no es PDF. |
+| `PDF_INVALID` | `422` | Base64 inválido, contenido vacío o archivo que no es PDF. |
 | `PDF_TOO_LARGE` | `413` | El tamaño supera `PDF_MAX_SIZE_MB`. |
 | `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene la estructura mínima esperada. |
-| `VALIDATION_ERROR` | `422` | El request no cumple el schema de entrada. |
+| `VALIDATION_ERROR` | `400` | El request no cumple el schema de entrada. |
 | `INTERNAL_ERROR` | `500` | Error interno no previsto. |
 
 ## Correlation ID
