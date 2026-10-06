@@ -15,6 +15,5 @@ class ValidationRequest(BaseModel):
 
 class ValidationResponse(BaseModel):
     valido: bool
-    nombre: str | None = None
-    tamano_bytes: int | None = None
-    error: dict | None = None
+    nombre: str
+    tamano_bytes: int

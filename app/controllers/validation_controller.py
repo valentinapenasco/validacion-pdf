@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.core.composition import get_validation_service
-from app.schemas.validation_request import ValidationRequest
+from app.schemas.validation_request import ValidationRequest, ValidationResponse
 from app.services.validation_service import ValidationService
 
 router = APIRouter(tags=["Validación PDF"])
@@ -19,10 +19,10 @@ async def health() -> dict:
 @router.post("/validar")
 async def validar_pdf(
     payload: ValidationRequest, service: ValidationServiceDep
-) -> dict:
+) -> ValidationResponse:
     resultado = service.validate(payload.archivo_base64, payload.nombre)
-    return {
-        "valido": resultado.valido,
-        "nombre": resultado.nombre,
-        "tamano_bytes": resultado.tamano_bytes,
-    }
+    return ValidationResponse(
+        valido=resultado.valido,
+        nombre=resultado.nombre,
+        tamano_bytes=resultado.tamano_bytes,
+    )
