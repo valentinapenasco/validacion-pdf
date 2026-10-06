@@ -5,6 +5,14 @@ from app.core.exceptions import PdfValidationError
 from app.models.pdf_validation_result import PdfValidationResult
 
 
+def _pdf_invalido() -> PdfValidationError:
+    return PdfValidationError(
+        code="PDF_INVALID",
+        message="El archivo no es un PDF válido",
+        status_code=422,
+    )
+
+
 class ValidationService:
     def __init__(self, max_size_bytes: int) -> None:
         self._max_size_bytes = max_size_bytes
@@ -12,29 +20,14 @@ class ValidationService:
     def validate(
         self, archivo_base64: str, nombre: str | None = None
     ) -> PdfValidationResult:
-        if not archivo_base64 or not archivo_base64.strip():
-            raise PdfValidationError(
-                code="PDF_INVALID",
-                message="El archivo no es un PDF válido",
-                status_code=422,
-            )
-
         sin_espacios = "".join(archivo_base64.split())
         try:
             decoded = base64.b64decode(sin_espacios, validate=True)
         except (ValueError, binascii.Error) as exc:
-            raise PdfValidationError(
-                code="PDF_INVALID",
-                message="El archivo no es un PDF válido",
-                status_code=422,
-            ) from exc
+            raise _pdf_invalido() from exc
 
         if not decoded:
-            raise PdfValidationError(
-                code="PDF_INVALID",
-                message="El archivo no es un PDF válido",
-                status_code=422,
-            )
+            raise _pdf_invalido()
 
         if len(decoded) > self._max_size_bytes:
             raise PdfValidationError(
@@ -48,11 +41,7 @@ class ValidationService:
             )
 
         if not decoded.startswith(b"%PDF"):
-            raise PdfValidationError(
-                code="PDF_INVALID",
-                message="El archivo no es un PDF válido",
-                status_code=422,
-            )
+            raise _pdf_invalido()
 
         if b"%%EOF" not in decoded:
             raise PdfValidationError(
