@@ -1,4 +1,5 @@
 import base64
+import logging
 
 VALID_PDF = (
     b"%PDF-1.4\n"
@@ -150,3 +151,24 @@ def test_validation_endpoint_rejects_blank_base64(client):
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_request_log_includes_correlation_id(client, caplog):
+    caplog.set_level(logging.INFO, logger="validacion_pdf")
+
+    client.get("/health", headers={"X-Correlation-ID": "log-123"})
+
+    assert "correlation_id=log-123" in caplog.text
+    assert "path=/health" in caplog.text
+
+
+def test_error_log_includes_code_and_correlation_id(client, caplog):
+    caplog.set_level(logging.INFO, logger="validacion_pdf")
+
+    client.post(
+        "/validar",
+        json={"archivo_base64": "no-es-base64", "nombre": "contrato.pdf"},
+        headers={"X-Correlation-ID": "log-error"},
+    )
+
+    assert "correlation_id=log-error code=PDF_INVALID" in caplog.text
