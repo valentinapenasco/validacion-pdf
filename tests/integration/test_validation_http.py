@@ -1,9 +1,5 @@
 import base64
 
-from fastapi.testclient import TestClient
-
-from app.main import app
-
 VALID_PDF = (
     b"%PDF-1.4\n"
     b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
@@ -17,23 +13,23 @@ def encoded_pdf(content: bytes = VALID_PDF) -> str:
     return base64.b64encode(content).decode("ascii")
 
 
-def test_health_endpoint_returns_ok():
-    response = TestClient(app).get("/health")
+def test_health_endpoint_returns_ok(client):
+    response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
     assert response.headers["X-Correlation-ID"]
 
 
-def test_versioned_health_endpoint_returns_ok():
-    response = TestClient(app).get("/api/v1/health")
+def test_versioned_health_endpoint_returns_ok(client):
+    response = client.get("/api/v1/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_validation_endpoint_returns_success_contract():
-    response = TestClient(app).post(
+def test_validation_endpoint_returns_success_contract(client):
+    response = client.post(
         "/validar",
         json={
             "archivo_base64": encoded_pdf(),
@@ -51,8 +47,8 @@ def test_validation_endpoint_returns_success_contract():
     }
 
 
-def test_versioned_validation_endpoint_is_supported():
-    response = TestClient(app).post(
+def test_versioned_validation_endpoint_is_supported(client):
+    response = client.post(
         "/api/v1/validar",
         json={"archivo_base64": encoded_pdf()},
     )
@@ -61,8 +57,8 @@ def test_versioned_validation_endpoint_is_supported():
     assert response.json()["valido"] is True
 
 
-def test_validation_endpoint_returns_standard_error_contract():
-    response = TestClient(app).post(
+def test_validation_endpoint_returns_standard_error_contract(client):
+    response = client.post(
         "/validar",
         json={"archivo_base64": "no-es-base64", "nombre": "archivo.pdf"},
     )
@@ -77,10 +73,10 @@ def test_validation_endpoint_returns_standard_error_contract():
     assert response.headers["X-Correlation-ID"]
 
 
-def test_validation_endpoint_rejects_corrupted_pdf():
+def test_validation_endpoint_rejects_corrupted_pdf(client):
     corrupted_pdf = b"%PDF-1.4\ncontenido incompleto"
 
-    response = TestClient(app).post(
+    response = client.post(
         "/validar",
         json={"archivo_base64": encoded_pdf(corrupted_pdf)},
     )
@@ -89,10 +85,10 @@ def test_validation_endpoint_rejects_corrupted_pdf():
     assert response.json()["error"]["code"] == "PDF_CORRUPTED"
 
 
-def test_validation_endpoint_rejects_pdf_that_is_too_large():
+def test_validation_endpoint_rejects_pdf_that_is_too_large(client):
     oversized_pdf = b"%PDF-1.4\n" + (b"x" * (6 * 1024 * 1024))
 
-    response = TestClient(app).post(
+    response = client.post(
         "/validar",
         json={"archivo_base64": encoded_pdf(oversized_pdf)},
     )
@@ -101,10 +97,10 @@ def test_validation_endpoint_rejects_pdf_that_is_too_large():
     assert response.json()["error"]["code"] == "PDF_TOO_LARGE"
 
 
-def test_error_preserves_supplied_correlation_id():
+def test_error_preserves_supplied_correlation_id(client):
     correlation_id = "error-123"
 
-    response = TestClient(app).post(
+    response = client.post(
         "/validar",
         json={"archivo_base64": "no-es-base64"},
         headers={"X-Correlation-ID": correlation_id},
@@ -115,8 +111,8 @@ def test_error_preserves_supplied_correlation_id():
     assert response.json()["error"]["correlation_id"] == correlation_id
 
 
-def test_error_uses_same_generated_correlation_id_in_header_and_body():
-    response = TestClient(app).post(
+def test_error_uses_same_generated_correlation_id_in_header_and_body(client):
+    response = client.post(
         "/validar",
         json={"archivo_base64": "no-es-base64"},
     )
@@ -128,8 +124,8 @@ def test_error_uses_same_generated_correlation_id_in_header_and_body():
     )
 
 
-def test_validation_endpoint_rejects_missing_base64():
-    response = TestClient(app).post(
+def test_validation_endpoint_rejects_missing_base64(client):
+    response = client.post(
         "/validar",
         json={"nombre": "archivo.pdf"},
     )
