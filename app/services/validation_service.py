@@ -53,7 +53,7 @@ class ValidationService:
                 status_code=422,
             )
 
-        if b"%%EOF" not in decoded or b"/Type /Catalog" not in decoded:
+        if b"%%EOF" not in decoded:
             raise PdfValidationError(
                 code="PDF_CORRUPTED",
                 message="El archivo PDF está corrupto",
