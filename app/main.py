@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -59,7 +60,7 @@ async def request_validation_exception_handler(
         400,
         "VALIDATION_ERROR",
         "El request no cumple el contrato esperado",
-        {"errors": exc.errors()},
+        {"errors": jsonable_encoder(exc.errors())},
     )
 
 
