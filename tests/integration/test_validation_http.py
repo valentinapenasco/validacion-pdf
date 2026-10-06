@@ -4,7 +4,6 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
-
 VALID_PDF = (
     b"%PDF-1.4\n"
     b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"

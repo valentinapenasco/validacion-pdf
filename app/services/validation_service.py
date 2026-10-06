@@ -7,7 +7,9 @@ from app.models.pdf_validation_result import PdfValidationResult
 
 
 class ValidationService:
-    def validate(self, archivo_base64: str, nombre: str | None = None) -> PdfValidationResult:
+    def validate(
+        self, archivo_base64: str, nombre: str | None = None
+    ) -> PdfValidationResult:
         if not archivo_base64 or not archivo_base64.strip():
             raise PdfValidationError(
                 code="PDF_INVALID",
