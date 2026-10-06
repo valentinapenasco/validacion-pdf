@@ -82,3 +82,21 @@ def test_validate_uses_default_name_when_name_is_omitted():
     result = service().validate(encode(VALID_PDF))
 
     assert result.nombre == "documento.pdf"
+
+
+def test_validate_accepts_catalog_written_without_space():
+    pdf = VALID_PDF.replace(b"/Type /Catalog", b"/Type/Catalog")
+
+    result = service().validate(encode(pdf), "contrato.pdf")
+
+    assert result.valido is True
+
+
+def test_validate_accepts_catalog_inside_compressed_object_stream():
+    # Desde PDF 1.5 el catálogo puede ir dentro de un object stream comprimido:
+    # el texto "/Type /Catalog" no aparece literal en el archivo.
+    pdf = VALID_PDF.replace(b"/Type /Catalog ", b"")
+
+    result = service().validate(encode(pdf), "contrato.pdf")
+
+    assert result.valido is True
