@@ -61,7 +61,7 @@ def test_validation_endpoint_rejects_corrupted_pdf(client):
 
     response = client.post(
         "/validar",
-        json={"archivo_base64": encoded_pdf(corrupted_pdf)},
+        json={"archivo_base64": encoded_pdf(corrupted_pdf), "nombre": "archivo.pdf"},
     )
 
     assert response.status_code == 422
@@ -73,7 +73,7 @@ def test_validation_endpoint_rejects_pdf_that_is_too_large(client):
 
     response = client.post(
         "/validar",
-        json={"archivo_base64": encoded_pdf(oversized_pdf)},
+        json={"archivo_base64": encoded_pdf(oversized_pdf), "nombre": "archivo.pdf"},
     )
 
     assert response.status_code == 413
@@ -85,7 +85,7 @@ def test_error_preserves_supplied_correlation_id(client):
 
     response = client.post(
         "/validar",
-        json={"archivo_base64": "no-es-base64"},
+        json={"archivo_base64": "no-es-base64", "nombre": "archivo.pdf"},
         headers={"X-Correlation-ID": correlation_id},
     )
 
@@ -97,7 +97,7 @@ def test_error_preserves_supplied_correlation_id(client):
 def test_error_uses_same_generated_correlation_id_in_header_and_body(client):
     response = client.post(
         "/validar",
-        json={"archivo_base64": "no-es-base64"},
+        json={"archivo_base64": "no-es-base64", "nombre": "archivo.pdf"},
     )
 
     assert response.status_code == 422
@@ -117,3 +117,10 @@ def test_validation_endpoint_rejects_missing_base64(client):
     assert response.json()["valido"] is False
     assert response.json()["error"]["code"] == "VALIDATION_ERROR"
     assert response.headers["X-Correlation-ID"]
+
+
+def test_validation_endpoint_rejects_missing_nombre(client):
+    response = client.post("/validar", json={"archivo_base64": encoded_pdf()})
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"

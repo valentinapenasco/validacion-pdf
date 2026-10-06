@@ -35,7 +35,7 @@ def test_validate_accepts_a_valid_pdf():
 
 def test_validate_rejects_invalid_base64():
     with pytest.raises(PdfValidationError) as error:
-        service().validate("no-es-base64")
+        service().validate("no-es-base64", "contrato.pdf")
 
     assert error.value.code == "PDF_INVALID"
     assert error.value.status_code == 422
@@ -43,7 +43,7 @@ def test_validate_rejects_invalid_base64():
 
 def test_validate_rejects_empty_content():
     with pytest.raises(PdfValidationError) as error:
-        service().validate(encode(b""))
+        service().validate(encode(b""), "contrato.pdf")
 
     assert error.value.code == "PDF_INVALID"
     assert error.value.status_code == 422
@@ -51,7 +51,7 @@ def test_validate_rejects_empty_content():
 
 def test_validate_rejects_content_that_is_not_a_pdf():
     with pytest.raises(PdfValidationError) as error:
-        service().validate(encode(b"texto plano"))
+        service().validate(encode(b"texto plano"), "contrato.pdf")
 
     assert error.value.code == "PDF_INVALID"
     assert error.value.status_code == 422
@@ -61,7 +61,7 @@ def test_validate_rejects_corrupted_pdf():
     corrupted_pdf = b"%PDF-1.4\ncontenido incompleto"
 
     with pytest.raises(PdfValidationError) as error:
-        service().validate(encode(corrupted_pdf))
+        service().validate(encode(corrupted_pdf), "contrato.pdf")
 
     assert error.value.code == "PDF_CORRUPTED"
     assert error.value.status_code == 422
@@ -71,17 +71,11 @@ def test_validate_rejects_pdf_that_is_too_large():
     oversized_pdf = b"%PDF-1.4\n" + (b"x" * (6 * 1024 * 1024))
 
     with pytest.raises(PdfValidationError) as error:
-        service().validate(encode(oversized_pdf))
+        service().validate(encode(oversized_pdf), "contrato.pdf")
 
     assert error.value.code == "PDF_TOO_LARGE"
     assert error.value.status_code == 413
     assert error.value.details["received_size_bytes"] == len(oversized_pdf)
-
-
-def test_validate_uses_default_name_when_name_is_omitted():
-    result = service().validate(encode(VALID_PDF))
-
-    assert result.nombre == "documento.pdf"
 
 
 def test_validate_accepts_catalog_written_without_space():
