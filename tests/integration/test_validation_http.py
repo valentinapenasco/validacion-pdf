@@ -141,3 +141,12 @@ def test_unexpected_error_returns_internal_error_contract(failing_client):
     assert body["error"]["details"] == {}
     assert body["error"]["correlation_id"] == "falla-500"
     assert response.headers["X-Correlation-ID"] == "falla-500"
+
+
+def test_validation_endpoint_rejects_blank_base64(client):
+    response = client.post(
+        "/validar", json={"archivo_base64": "   ", "nombre": "contrato.pdf"}
+    )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
