@@ -59,4 +59,23 @@ async def request_validation_exception_handler(
     )
 
 
+@app.exception_handler(Exception)
+async def unexpected_exception_handler(request: Request, exc: Exception):
+    # Corre fuera del middleware de correlation ID: el header se agrega acá.
+    correlation_id = request.state.correlation_id
+    return JSONResponse(
+        status_code=500,
+        content={
+            "valido": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Error interno del servidor",
+                "details": {},
+                "correlation_id": correlation_id,
+            },
+        },
+        headers={"X-Correlation-ID": correlation_id},
+    )
+
+
 app.include_router(validation_router)
