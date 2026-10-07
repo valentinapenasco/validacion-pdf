@@ -1,0 +1,14 @@
+# El Dockerfile copia pyproject.toml, uv.lock, README.md y app/: el resto no entra al
+# contexto de build, y nunca entran el .env, el venv local ni los bytecodes.
+.env
+.env.*
+**/.env
+.git
+.venv
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+ISSUES_VALIDACION_PDF.md
