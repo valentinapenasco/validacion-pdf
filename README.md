@@ -112,21 +112,38 @@ El servicio propaga la cabecera `X-Correlation-ID`:
 - El identificador se devuelve en la cabecera de la respuesta.
 - En las respuestas de error también aparece como `error.correlation_id`.
 
-## Logs
+## Logs (12-Factor XI)
 
-Los logs van a `stdout` (12-Factor XI); la aplicación no escribe archivos. Cada
-línea incluye el `correlation_id`, así que `docker compose logs` alcanza para
-seguir una request por todos los servicios:
+Los logs van a `stdout`; la aplicación no escribe archivos. La configuración está
+en [`logging.json`](logging.json), en la raíz del repo (formato `dictConfig`), y
+el nivel sale de `LOG_LEVEL` (contrato `microservicios-pdf` 1.2.0). Cada línea
+lleva fecha, nivel, logger y `correlation_id` (`-` fuera de una request), así que
+`docker compose logs` alcanza para seguir una request por todos los servicios:
 
 ```text
-2026-10-06 19:19:48,236 WARNING validacion_pdf correlation_id=demo-2 code=PDF_INVALID status=422 message=El archivo no es un PDF válido
-2026-10-06 19:19:48,236 INFO validacion_pdf correlation_id=demo-2 method=POST path=/validar status=422 duracion_ms=1.1
+INFO validacion_pdf correlation_id=- servicio iniciado
+INFO app.services.validation_service correlation_id=demo-1 pdf valido tamano_bytes=10652
+INFO validacion_pdf correlation_id=demo-1 method=POST path=/validar status=200 duracion_ms=1.4
+WARNING validacion_pdf correlation_id=demo-2 code=PDF_INVALID status=422 message=El archivo no es un PDF válido
 ```
 
-- Cada request: método, ruta, status y duración (`INFO`).
-- Cada error: código y status (`WARNING` para 4xx, `ERROR` con traceback para 5xx).
-- El access log propio de uvicorn está desactivado en la imagen porque no lleva
-  el `correlation_id`.
+| Nivel | Qué registra este servicio |
+| --- | --- |
+| `INFO` | Cada request (método, ruta, status y duración), PDF aceptado con su tamaño, inicio y apagado. |
+| `WARNING` | Rechazos del contrato (`PDF_INVALID`, `PDF_TOO_LARGE`, `PDF_CORRUPTED`, `VALIDATION_ERROR`) con su `code`. |
+| `ERROR` | Error no previsto (`INTERNAL_ERROR`), con traceback. |
+
+**No se registran** el Base64, el contenido del archivo ni su nombre (puede tener
+datos personales); hay un test que lo verifica. El access log propio de uvicorn
+está desactivado en la imagen porque lo registra la app con el `correlation_id`.
+
+## Finalización segura (12-Factor IX)
+
+La imagen corre uvicorn como PID 1 con `--timeout-graceful-shutdown 30`. Ante
+`SIGTERM` (`docker stop`) deja de aceptar conexiones, termina las validaciones en
+curso, ejecuta el cierre del `lifespan` (`apagado iniciado` / `apagado completo`)
+y sale con código 0. Probado con la imagen `1.0.2`:
+`docker inspect --format '{{.State.ExitCode}}'` → `0`.
 
 Ejemplo:
 
@@ -148,6 +165,7 @@ cp .env.example .env
 | `PDF_MAX_SIZE_MB` | `5` | Tamaño máximo permitido del PDF en megabytes. |
 | `APP_NAME` | `validacion-pdf` | Nombre de la aplicación. |
 | `APP_VERSION` | `1.0.0` | Versión expuesta por FastAPI. |
+| `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` o `ERROR` (opcional). Otro valor impide arrancar. |
 
 El archivo `.env` no debe versionarse.
 
@@ -307,16 +325,19 @@ Los tests cubren:
   - `nombre` o `archivo_base64` faltantes o en blanco → `VALIDATION_ERROR`.
   - error no previsto → `INTERNAL_ERROR` (con un servicio de prueba inyectado).
   - propagación de `X-Correlation-ID`.
-  - logs con `correlation_id`.
+  - logs con `correlation_id`, evento de PDF aceptado, sin datos sensibles,
+    inicio y apagado en el `lifespan`.
+- Tests unitarios de logs: `LOG_LEVEL` inválido y formato de `logging.json`.
 
 Queda fuera de los tests automatizados, a propósito: la imagen Docker (se
-verifica con el healthcheck al levantarla).
+verifica con el healthcheck al levantarla) y el apagado con `SIGTERM`, que depende
+del proceso de uvicorn y se probó a mano (ver "Finalización segura").
 
 ## Docker
 
 ```bash
-docker build -t validacion-pdf:1.0.0 .
-docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.0
+docker build -t validacion-pdf:1.0.2 .
+docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.2
 ```
 
 La imagen corre con el usuario sin privilegios `appuser` y tiene un
