@@ -1,6 +1,7 @@
 import logging
-import sys
 import time
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
@@ -11,18 +12,27 @@ from fastapi.responses import JSONResponse
 from app.controllers.validation_controller import router as validation_router
 from app.core.config import settings
 from app.core.exceptions import PdfValidationError
+from app.core.logs import configurar_logs, correlation_id_actual
 
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stdout,
-    format="%(asctime)s %(levelname)s %(name)s %(message)s",
-)
+configurar_logs(settings.log_level)
 logger = logging.getLogger("validacion_pdf")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    logger.info("servicio iniciado")
+    yield
+    # uvicorn llega acá ante SIGTERM, después de cerrar el puerto y terminar las
+    # requests en curso (12-Factor IX). Validación no tiene conexiones que cerrar.
+    logger.info("apagado iniciado")
+    logger.info("apagado completo")
+
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="Microservicio para validar archivos PDF en Base64",
+    lifespan=lifespan,
 )
 
 
@@ -30,18 +40,21 @@ app = FastAPI(
 async def correlation_id_middleware(request: Request, call_next):
     correlation_id = request.headers.get("x-correlation-id") or str(uuid4())
     request.state.correlation_id = correlation_id
+    token = correlation_id_actual.set(correlation_id)
     inicio = time.perf_counter()
-    response = await call_next(request)
-    response.headers["X-Correlation-ID"] = correlation_id
-    logger.info(
-        "correlation_id=%s method=%s path=%s status=%s duracion_ms=%.1f",
-        correlation_id,
-        request.method,
-        request.url.path,
-        response.status_code,
-        (time.perf_counter() - inicio) * 1000,
-    )
-    return response
+    try:
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        logger.info(
+            "method=%s path=%s status=%s duracion_ms=%.1f",
+            request.method,
+            request.url.path,
+            response.status_code,
+            (time.perf_counter() - inicio) * 1000,
+        )
+        return response
+    finally:
+        correlation_id_actual.reset(token)
 
 
 def error_response(
@@ -57,8 +70,7 @@ def error_response(
     correlation_id = request.state.correlation_id
     logger.log(
         logging.ERROR if status_code >= 500 else logging.WARNING,
-        "correlation_id=%s code=%s status=%s message=%s",
-        correlation_id,
+        "code=%s status=%s message=%s",
         code,
         status_code,
         message,

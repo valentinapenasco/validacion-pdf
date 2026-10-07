@@ -1,8 +1,11 @@
 import base64
 import binascii
+import logging
 
 from app.core.exceptions import PdfValidationError
 from app.models.pdf_validation_result import PdfValidationResult
+
+logger = logging.getLogger(__name__)
 
 
 def _pdf_invalido() -> PdfValidationError:
@@ -48,6 +51,8 @@ class ValidationService:
                 status_code=422,
             )
 
+        # Sin el nombre ni el contenido (contrato 1.2.0): pueden tener datos personales.
+        logger.info("pdf valido tamano_bytes=%d", len(decoded))
         return PdfValidationResult(
             valido=True,
             nombre=nombre,
