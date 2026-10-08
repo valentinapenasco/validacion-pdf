@@ -1,6 +1,6 @@
 [project]
 name = "validacion-pdf"
-version = "1.0.3"
+version = "1.0.4"
 description = "Microservicio de validación de archivos PDF para el proyecto microservicios-pdf"
 readme = "README.md"
 requires-python = ">=3.10"
