@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.3",
+    version="1.0.4",
     description="Microservicio para validar archivos PDF en Base64",
     lifespan=lifespan,
 )
