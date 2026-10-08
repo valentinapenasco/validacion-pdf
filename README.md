@@ -164,7 +164,6 @@ cp .env.example .env
 | --- | --- | --- |
 | `PDF_MAX_SIZE_MB` | `5` | Tamaño máximo permitido del PDF en megabytes. |
 | `APP_NAME` | `validacion-pdf` | Nombre de la aplicación. |
-| `APP_VERSION` | `1.0.0` | Versión expuesta por FastAPI. |
 | `LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` o `ERROR` (opcional). Otro valor impide arrancar. |
 
 El archivo `.env` no debe versionarse.
@@ -336,9 +335,14 @@ del proceso de uvicorn y se probó a mano (ver "Finalización segura").
 ## Docker
 
 ```bash
-docker build -t validacion-pdf:1.0.2 .
-docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.2
+docker build -t validacion-pdf:1.0.3 .
+docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.3
 ```
+
+La versión del servicio es la de `pyproject.toml` (1.0.3): es la que muestra Swagger en
+`/docs` y el tag de la imagen. `tests/integration/test_openapi.py` verifica que
+`FastAPI(version=...)` en `app/main.py` coincida con `pyproject.toml`; en una versión
+nueva se cambian los dos.
 
 La imagen corre con el usuario sin privilegios `appuser` y tiene un
 `HEALTHCHECK` contra `/health`.
