@@ -158,8 +158,8 @@ def test_request_log_includes_correlation_id(client, caplog):
 
     client.get("/health", headers={"X-Correlation-ID": "log-123"})
 
-    assert "correlation_id=log-123" in caplog.text
-    assert "path=/health" in caplog.text
+    accesos = [r for r in caplog.records if "path=/health" in r.getMessage()]
+    assert [r.correlation_id for r in accesos] == ["log-123"]
 
 
 def test_error_log_includes_code_and_correlation_id(client, caplog):
@@ -171,4 +171,5 @@ def test_error_log_includes_code_and_correlation_id(client, caplog):
         headers={"X-Correlation-ID": "log-error"},
     )
 
-    assert "correlation_id=log-error code=PDF_INVALID" in caplog.text
+    errores = [r for r in caplog.records if "code=PDF_INVALID" in r.getMessage()]
+    assert [r.correlation_id for r in errores] == ["log-error"]
