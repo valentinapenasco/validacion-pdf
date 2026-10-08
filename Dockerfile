@@ -6,8 +6,11 @@ COPY pyproject.toml uv.lock README.md ./
 COPY logging.json ./
 COPY app ./app
 
-RUN pip install --no-cache-dir uv==0.11.15 \
-    && uv sync --frozen --no-dev
+# uv se monta solo durante este RUN (--mount=from=...) y no queda en la imagen final:
+# Grype marcaba High en librerías de Rust compiladas dentro del binario (quinn-proto,
+# rustls-webpki).
+RUN --mount=from=ghcr.io/astral-sh/uv:0.11.15,source=/uv,target=/bin/uv \
+    uv sync --frozen --no-dev
 
 ENV PATH="/app/.venv/bin:$PATH"
 
