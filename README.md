@@ -2,7 +2,7 @@
 
 Microservicio FastAPI del proyecto `microservicios-pdf` responsable de validar
 archivos PDF recibidos en Base64. Está alineado con el contrato compartido
-`microservicios-pdf v1.0.0`.
+`microservicios-pdf` v1.4.0 (en el repo `integracion`, `CONTRATO.md`).
 
 ## Responsabilidad
 
@@ -363,8 +363,8 @@ tests unitarios y de integración.
   bytes ya decodificados, así que un request enorme se decodifica entero antes
   de rechazarse. El tamaño del body se puede limitar antes, en Traefik.
 - **Validación estructural mínima.** Solo se verifica `%PDF` al inicio y
-  `%%EOF`. La validación profunda la hace `extraccion-texto` con `pypdf`, que
-  responde `PDF_CORRUPTED` si no puede leer el archivo.
+  `%%EOF`. La validación profunda la hace `extraccion-texto` con PyMuPDF, que
+  responde `PDF_CORRUPTED` si no puede leer el archivo o no tiene páginas.
 - **Puerto fijo en la imagen (8000).** Docker Compose y Traefik lo mapean; no
   hace falta una variable porque el contrato no la define.
 
