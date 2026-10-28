@@ -1,4 +1,5 @@
 import logging
+import socket
 import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -11,6 +12,7 @@ from fastapi.responses import JSONResponse
 
 from app.controllers.validation_controller import router as validation_router
 from app.core.config import settings
+from app.core.consul_registry import ConsulRegistry
 from app.core.exceptions import PdfValidationError
 from app.core.logs import configurar_logs, correlation_id_actual
 
@@ -20,12 +22,31 @@ logger = logging.getLogger("validacion_pdf")
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    registry = _consul_registry()
+    if registry:
+        await registry.register()
     logger.info("servicio iniciado")
-    yield
-    # uvicorn llega acá ante SIGTERM, después de cerrar el puerto y terminar las
-    # requests en curso (12-Factor IX). Validación no tiene conexiones que cerrar.
-    logger.info("apagado iniciado")
-    logger.info("apagado completo")
+    try:
+        yield
+    finally:
+        # uvicorn llega acá ante SIGTERM, después de cerrar el puerto y terminar las
+        # requests en curso (12-Factor IX). Validación no tiene conexiones que cerrar.
+        logger.info("apagado iniciado")
+        if registry:
+            try:
+                await registry.deregister()
+            except Exception:
+                logger.exception("no se pudo deregistrar el servicio de Consul")
+        logger.info("apagado completo")
+
+
+def _consul_registry() -> ConsulRegistry | None:
+    if not settings.consul_enabled:
+        return None
+    return ConsulRegistry(
+        settings=settings,
+        instance_id=f"validacion-pdf-{socket.gethostname()}",
+    )
 
 
 app = FastAPI(
