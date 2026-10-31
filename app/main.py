@@ -51,7 +51,7 @@ def _consul_registry() -> ConsulRegistry | None:
 
 app = FastAPI(
     title=settings.app_name,
-    version="1.0.4",
+    version="1.0.5",
     description="Microservicio para validar archivos PDF en Base64",
     lifespan=lifespan,
 )

@@ -46,7 +46,9 @@ def test_register_and_deregister_validacion(tmp_path: Path):
     assert payload["Address"] == "validacion-pdf"
     assert payload["Port"] == 8000
     assert payload["Checks"][0]["HTTP"] == "http://validacion-pdf:8000/health"
-    assert "traefik.enable=true" in payload["Tags"]
+    # Servicio interno (contrato: solo el orquestador es público): sin etiquetas de
+    # Traefik, así Consul Catalog no lo publica.
+    assert not [tag for tag in payload["Tags"] if tag.startswith("traefik")]
     assert str(requests[1].url).endswith(
         "/v1/agent/service/deregister/validacion-pdf-instance-a"
     )
