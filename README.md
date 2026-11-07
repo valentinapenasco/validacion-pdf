@@ -168,6 +168,22 @@ cp .env.example .env
 
 El archivo `.env` no debe versionarse.
 
+### Configuración desde Consul (contrato 1.6.0)
+
+Con `CONSUL_ENABLED=true`, las variables de la tabla salen del KV de Consul, bajo
+`config/validacion-pdf/` (por ejemplo `config/validacion-pdf/PDF_MAX_SIZE_MB`), y tienen
+prioridad sobre el entorno. Del entorno solo llega cómo conectarse a Consul:
+`CONSUL_ENABLED`, `CONSUL_HTTP_ADDR` y `CONSUL_HTTP_TOKEN_FILE` (el token, como Docker
+secret). `CONSUL_SERVICE_ADDRESS` y `CONSUL_SERVICE_PORT` también pueden venir del KV.
+
+- Las claves las carga el servicio `consul-config` del compose de integración, desde
+  `integracion/env/validacion.env`.
+- Si no hay claves bajo `config/validacion-pdf/` o Consul no responde, el servicio no
+  arranca: la configuración no se inventa.
+- Sin Consul (tests y desarrollo local), todo sale del entorno, como antes.
+- Lo implementan `app/core/consul_config.py` (lee el KV) y `cargar_settings()` en
+  `app/core/config.py`.
+
 ## Arquitectura
 
 El proyecto utiliza la arquitectura de capas definida para
@@ -335,11 +351,11 @@ del proceso de uvicorn y se probó a mano (ver "Finalización segura").
 ## Docker
 
 ```bash
-docker build -t validacion-pdf:1.0.5 .
-docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.0.5
+docker build -t validacion-pdf:1.1.0 .
+docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.1.0
 ```
 
-La versión del servicio es la de `pyproject.toml` (1.0.5): es la que muestra Swagger en
+La versión del servicio es la de `pyproject.toml` (1.1.0): es la que muestra Swagger en
 `/docs` y el tag de la imagen. `tests/integration/test_openapi.py` verifica que
 `FastAPI(version=...)` en `app/main.py` coincida con `pyproject.toml`; en una versión
 nueva se cambian los dos.
