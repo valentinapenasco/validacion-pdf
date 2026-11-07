@@ -168,6 +168,22 @@ cp .env.example .env
 
 El archivo `.env` no debe versionarse.
 
+### Configuración desde Consul (contrato 1.6.0)
+
+Con `CONSUL_ENABLED=true`, las variables de la tabla salen del KV de Consul, bajo
+`config/validacion-pdf/` (por ejemplo `config/validacion-pdf/PDF_MAX_SIZE_MB`), y tienen
+prioridad sobre el entorno. Del entorno solo llega cómo conectarse a Consul:
+`CONSUL_ENABLED`, `CONSUL_HTTP_ADDR` y `CONSUL_HTTP_TOKEN_FILE` (el token, como Docker
+secret). `CONSUL_SERVICE_ADDRESS` y `CONSUL_SERVICE_PORT` también pueden venir del KV.
+
+- Las claves las carga el servicio `consul-config` del compose de integración, desde
+  `integracion/env/validacion.env`.
+- Si no hay claves bajo `config/validacion-pdf/` o Consul no responde, el servicio no
+  arranca: la configuración no se inventa.
+- Sin Consul (tests y desarrollo local), todo sale del entorno, como antes.
+- Lo implementan `app/core/consul_config.py` (lee el KV) y `cargar_settings()` en
+  `app/core/config.py`.
+
 ## Arquitectura
 
 El proyecto utiliza la arquitectura de capas definida para
