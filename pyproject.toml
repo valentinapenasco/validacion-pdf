@@ -5,20 +5,20 @@ description = "Microservicio de validación de archivos PDF para el proyecto mic
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "fastapi==0.136.0",
-    "uvicorn[standard]==0.45.0",
-    "pydantic==2.13.3",
-    "pydantic-settings==2.14.2",
-    "httpx==0.28.1",
-    "pymupdf==1.26.5",
+    "fastapi>=0.136.0",
+    "uvicorn[standard]>=0.45.0",
+    "pydantic>=2.13.3",
+    "pydantic-settings>=2.14.2",
+    "httpx>=0.28.1",
+    "pymupdf>=1.26.5",
 ]
 
 [dependency-groups]
 dev = [
-    "black==26.10.0",
-    "httpx==0.28.1",
-    "pytest==9.0.3",
-    "ruff==0.16.10",
+    "black>=26.10.0",
+    "httpx>=0.28.1",
+    "pytest>=9.0.3",
+    "ruff>=0.16.10",
 ]
 
 [tool.pytest.ini_options]
