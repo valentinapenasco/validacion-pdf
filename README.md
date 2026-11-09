@@ -98,10 +98,9 @@ común:
 
 | Código | HTTP | Descripción |
 | --- | ---: | --- |
-| `PDF_INVALID` | `422` | Base64 inválido, contenido vacío o archivo que no es PDF. |
+| `PDF_INVALID` | `422` | Base64 inválido, contenido vacío, archivo que no es PDF o PDF protegido con contraseña (este último con `details.reason = "protegido_con_contrasena"`). |
 | `PDF_TOO_LARGE` | `413` | El tamaño supera `PDF_MAX_SIZE_MB`. |
-| `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene el marcador `%%EOF` (archivo truncado). |
-| `PDF_PROTECTED` | `422` | El PDF está protegido con contraseña y no puede validarse sin credenciales. |
+| `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene el marcador `%%EOF` (archivo truncado) o PyMuPDF no lo puede abrir. |
 | `VALIDATION_ERROR` | `400` | El request no cumple el schema de entrada (falta un campo, campo vacío, body que no es JSON). |
 | `INTERNAL_ERROR` | `500` | Error interno no previsto. También devuelve el `correlation_id`. |
 
@@ -388,6 +387,12 @@ tests unitarios y de integración.
   documento no requiera contraseña usando PyMuPDF. La validación profunda la
   hace `extraccion-texto`, que responde `PDF_CORRUPTED` si no puede leer el
   archivo o no tiene páginas.
+- **PDF con contraseña.** Se detecta acá, en `ValidationService.validate`: PyMuPDF
+  abre el documento y `needs_pass` dice si pide contraseña. Se responde
+  `PDF_INVALID` con `details.reason = "protegido_con_contrasena"` y no un código
+  propio, porque el contrato no lo define y el orquestador devuelve como `500`
+  cualquier código que no conoce. Un PDF que solo tiene contraseña de dueño
+  (restringe permisos como imprimir o copiar) se abre sin ella y se acepta.
 - **Puerto fijo en la imagen (8000).** Docker Compose y Traefik lo mapean; no
   hace falta una variable porque el contrato no la define.
 
