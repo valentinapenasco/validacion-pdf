@@ -9,13 +9,14 @@ archivos PDF recibidos en Base64. Está alineado con el contrato compartido
 El servicio recibe el contenido de un archivo PDF codificado en Base64 y
 determina si puede continuar hacia los siguientes microservicios del flujo.
 
-Hace:
+Acciones que realiza:
 
 - Recibir `archivo_base64` y `nombre`.
 - Decodificar el contenido Base64.
 - Validar que el contenido no esté vacío.
 - Validar la firma `%PDF`.
 - Validar que el PDF esté completo (marcador `%%EOF`).
+- Validar que el PDF no esté protegido con contraseña.
 - Validar el tamaño máximo configurado.
 - Informar el tamaño recibido en bytes.
 - Propagar `X-Correlation-ID` y registrarlo en cada línea de log.
@@ -100,6 +101,7 @@ común:
 | `PDF_INVALID` | `422` | Base64 inválido, contenido vacío o archivo que no es PDF. |
 | `PDF_TOO_LARGE` | `413` | El tamaño supera `PDF_MAX_SIZE_MB`. |
 | `PDF_CORRUPTED` | `422` | El contenido comienza como PDF, pero no tiene el marcador `%%EOF` (archivo truncado). |
+| `PDF_PROTECTED` | `422` | El PDF está protegido con contraseña y no puede validarse sin credenciales. |
 | `VALIDATION_ERROR` | `400` | El request no cumple el schema de entrada (falta un campo, campo vacío, body que no es JSON). |
 | `INTERNAL_ERROR` | `500` | Error interno no previsto. También devuelve el `correlation_id`. |
 
@@ -252,6 +254,10 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
+Las dependencias directas y las herramientas de desarrollo están fijadas a
+versiones exactas en `pyproject.toml`; `uv.lock` fija además todas sus
+dependencias transitivas.
+
 El servicio queda disponible en `http://localhost:8000`.
 
 ## Ejemplos de uso
@@ -378,9 +384,10 @@ tests unitarios y de integración.
 - **Tamaño medido después de decodificar.** El límite se controla sobre los
   bytes ya decodificados, así que un request enorme se decodifica entero antes
   de rechazarse. El tamaño del body se puede limitar antes, en Traefik.
-- **Validación estructural mínima.** Solo se verifica `%PDF` al inicio y
-  `%%EOF`. La validación profunda la hace `extraccion-texto` con PyMuPDF, que
-  responde `PDF_CORRUPTED` si no puede leer el archivo o no tiene páginas.
+- **Validación estructural acotada.** Se verifica `%PDF`, `%%EOF` y que el
+  documento no requiera contraseña usando PyMuPDF. La validación profunda la
+  hace `extraccion-texto`, que responde `PDF_CORRUPTED` si no puede leer el
+  archivo o no tiene páginas.
 - **Puerto fijo en la imagen (8000).** Docker Compose y Traefik lo mapean; no
   hace falta una variable porque el contrato no la define.
 

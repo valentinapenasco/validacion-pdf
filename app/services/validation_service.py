@@ -2,6 +2,8 @@ import base64
 import binascii
 import logging
 
+import fitz
+
 from app.core.exceptions import PdfValidationError
 from app.models.pdf_validation_result import PdfValidationResult
 
@@ -50,6 +52,25 @@ class ValidationService:
                 message="El archivo PDF está corrupto",
                 status_code=422,
             )
+
+        try:
+            documento = fitz.open(stream=decoded, filetype="pdf")
+        except fitz.FileDataError as exc:
+            raise PdfValidationError(
+                code="PDF_CORRUPTED",
+                message="El archivo PDF está corrupto",
+                status_code=422,
+            ) from exc
+
+        try:
+            if documento.needs_pass:
+                raise PdfValidationError(
+                    code="PDF_PROTECTED",
+                    message="El archivo PDF está protegido con contraseña",
+                    status_code=422,
+                )
+        finally:
+            documento.close()
 
         # Sin el nombre ni el contenido (contrato 1.2.0): pueden tener datos personales.
         logger.info("pdf valido tamano_bytes=%d", len(decoded))

@@ -1,5 +1,8 @@
 import base64
+import tempfile
+from pathlib import Path
 
+import fitz
 import pytest
 
 from app.core.exceptions import PdfValidationError
@@ -103,3 +106,24 @@ def test_validate_accepts_base64_with_line_breaks():
     result = service().validate(wrapped, "contrato.pdf")
 
     assert result.tamano_bytes == len(VALID_PDF)
+
+
+def test_validate_rejects_password_protected_pdf():
+    documento = fitz.open()
+    documento.new_page()
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        pdf_path = Path(temporary_directory) / "protected.pdf"
+        documento.save(
+            pdf_path,
+            encryption=fitz.PDF_ENCRYPT_AES_256,
+            user_pw="secret",
+            owner_pw="owner",
+        )
+        documento.close()
+        protected_pdf = pdf_path.read_bytes()
+
+        with pytest.raises(PdfValidationError) as error:
+            service().validate(encode(protected_pdf), "protegido.pdf")
+
+    assert error.value.code == "PDF_PROTECTED"
+    assert error.value.status_code == 422
