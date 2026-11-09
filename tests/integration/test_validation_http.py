@@ -69,6 +69,22 @@ def test_validation_endpoint_rejects_corrupted_pdf(client):
     assert response.json()["error"]["code"] == "PDF_CORRUPTED"
 
 
+def test_validation_endpoint_rejects_password_protected_pdf(client, pdf_con_contrasena):
+    response = client.post(
+        "/validar",
+        json={
+            "archivo_base64": encoded_pdf(pdf_con_contrasena),
+            "nombre": "protegido.pdf",
+        },
+    )
+
+    assert response.status_code == 422
+    body = response.json()
+    assert body["valido"] is False
+    assert body["error"]["code"] == "PDF_INVALID"
+    assert body["error"]["details"] == {"reason": "protegido_con_contrasena"}
+
+
 def test_validation_endpoint_rejects_pdf_that_is_too_large(client):
     oversized_pdf = b"%PDF-1.4\n" + (b"x" * (6 * 1024 * 1024))
 

@@ -63,11 +63,13 @@ class ValidationService:
             ) from exc
 
         try:
+            # Código de la tabla común: el orquestador solo traduce esos.
             if documento.needs_pass:
                 raise PdfValidationError(
-                    code="PDF_PROTECTED",
+                    code="PDF_INVALID",
                     message="El archivo PDF está protegido con contraseña",
                     status_code=422,
+                    details={"reason": "protegido_con_contrasena"},
                 )
         finally:
             documento.close()
