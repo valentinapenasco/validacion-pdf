@@ -1,8 +1,5 @@
 import base64
-import tempfile
-from pathlib import Path
 
-import fitz
 import pytest
 
 from app.core.exceptions import PdfValidationError
@@ -108,22 +105,19 @@ def test_validate_accepts_base64_with_line_breaks():
     assert result.tamano_bytes == len(VALID_PDF)
 
 
-def test_validate_rejects_password_protected_pdf():
-    documento = fitz.open()
-    documento.new_page()
-    with tempfile.TemporaryDirectory() as temporary_directory:
-        pdf_path = Path(temporary_directory) / "protected.pdf"
-        documento.save(
-            pdf_path,
-            encryption=fitz.PDF_ENCRYPT_AES_256,
-            user_pw="secret",
-            owner_pw="owner",
-        )
-        documento.close()
-        protected_pdf = pdf_path.read_bytes()
+def test_validate_rejects_password_protected_pdf(pdf_con_contrasena):
+    with pytest.raises(PdfValidationError) as error:
+        service().validate(encode(pdf_con_contrasena), "protegido.pdf")
 
-        with pytest.raises(PdfValidationError) as error:
-            service().validate(encode(protected_pdf), "protegido.pdf")
-
-    assert error.value.code == "PDF_PROTECTED"
+    # Un código de la tabla común: el orquestador solo traduce esos y cualquier otro
+    # lo devuelve como 500.
+    assert error.value.code == "PDF_INVALID"
     assert error.value.status_code == 422
+    assert error.value.details == {"reason": "protegido_con_contrasena"}
+
+
+def test_validate_accepts_pdf_with_only_owner_password(pdf_solo_con_permisos):
+    # La contraseña de dueño solo restringe permisos: el PDF se abre y se lee igual.
+    result = service().validate(encode(pdf_solo_con_permisos), "permisos.pdf")
+
+    assert result.valido is True
