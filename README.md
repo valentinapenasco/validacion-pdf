@@ -356,11 +356,11 @@ del proceso de uvicorn y se probó a mano (ver "Finalización segura").
 ## Docker
 
 ```bash
-docker build -t validacion-pdf:1.1.0 .
-docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.1.0
+docker build -t validacion-pdf:1.2.0 .
+docker run --rm -p 8000:8000 --env-file .env validacion-pdf:1.2.0
 ```
 
-La versión del servicio es la de `pyproject.toml` (1.1.0): es la que muestra Swagger en
+La versión del servicio es la de `pyproject.toml` (1.2.0): es la que muestra Swagger en
 `/docs` y el tag de la imagen. `tests/integration/test_openapi.py` verifica que
 `FastAPI(version=...)` en `app/main.py` coincida con `pyproject.toml`; en una versión
 nueva se cambian los dos.
