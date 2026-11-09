@@ -19,9 +19,19 @@ def test_identifica_el_proyecto() -> None:
     assert re.search(r'^requires-python = ">=3\.10"$', PYPROJECT, re.M)
 
 
-def test_declara_pymupdf_con_version_exacta() -> None:
+def test_declara_pymupdf() -> None:
     # app/services/validation_service.py importa fitz (PyMuPDF).
-    assert re.search(r'"pymupdf==[\d.]+"', _dependencias())
+    assert re.search(r'"pymupdf>=[\d.]+"', _dependencias())
+
+
+def test_todas_las_dependencias_declaran_una_version_minima() -> None:
+    # Mismo criterio en los cinco microservicios: >= la versión probada, que es la
+    # que fija uv.lock. Sin == ni rangos con tope.
+    declaradas = re.findall(r'^\s+"([^"]+)",$', PYPROJECT, re.M)
+
+    assert declaradas
+    for dependencia in declaradas:
+        assert re.fullmatch(r"[\w.\[\]-]+>=[\d.]+", dependencia), dependencia
 
 
 def test_no_repite_tablas() -> None:
